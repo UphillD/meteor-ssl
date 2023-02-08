@@ -2,25 +2,107 @@
 
 #### Simple built-in Meteor SSL functionality for the first time!
 
-## Quickstart
-```sh
-meteor add nourharidy:ssl 
-```
-After the package installation has finished, you place your SSL **key** & **cert** files inside your Meteor *private* directory. 
+*or*
+
+#### So, you wanna self-host a secure webpage developed with meteor?
+
+## Inspiration
+
+The original repo for this plugin can be found [here](https://github.com/nourharidy/meteor-ssl), as developed by [nourharidy](https://github.com/nourharidy). The original code hasn't been updated in some time and needs some (non-obvious) work to get it working, so this repo aims to address these issues.
+
+## Use case
+
+Picture this: you have worked hard to create a webpage on meteor. You have deployed your webpage on your own machine and can access it via localhost (e.g. http://localhost:1000). You have forwarded a port for your site, and made it available for users under a public IP and port combination (of the form http://255.255.255.255:1000).
+
+Now, you are trying to secure this page via SSL, so that a user can visit it through a url of the form https://255.255.255.255:2000.
+
+## Installation
+
+### Step 0: Getting an SSL certificate
+
+Using the commands below, you can generate a self-signed SSL certificate:
 
 ```sh
 openssl genrsa -out localhost.key 2048
 openssl req -new -x509 -key localhost.key -out localhost.cert -days 3650 -subj /CN=localhost
 ```
-_If you want to use a host other than localhost then replace every reference to “localhost” above witb your custom domain_.
+
+However, using a self-signed certificate will result in all your visitors receiving a scary warning message on their browser whenever they visit your website for the first time. You'll need to buy a certificate from a Certificate Authority (CA) to work around this. I used SSLs.com (not affiliated) to buy mine, although there should also be some free solutions.
+
+At the end of this process, you'll be left with a **key** file:
+```
+-----BEGIN PRIVATE KEY-----
+YOUR PRIVATE KEY GOES HERE
+-----END PRIVATE KEY-----
+```
+
+and a **certificate** file:
+
+```
+-----BEGIN CERTIFICATE-----
+YOUR CERTIFICATE GOES HERE
+-----END CERTIFICATE-----
+```
+
+In my case, the **key** file had the extension *.pem*, while the **certificate** file had the extension *.crt*. These shouldn't matter, however, provided your files are of the form described above. Also, make sure the files are encoded in UTF-8, and that there are no permission issues.
+
+### Step 1: Installing the plugin
+
+Clone the repository:
 
 ```sh
-// somewhere within your server code
-SSL(
-  Assets.getText("localhost.key"),
-  Assets.getText("localhost.cert"),
-  443);
+git clone --depth=1 https://github.com/UphillD/meteor-ssl
 ```
+
+Enter the plugin directory:
+
+```sh
+cd meteor-ssl
+```
+
+Install the plugin:
+
+```sh
+meteor add uphilld:ssl
+```
+
+### Step 2: Using the plugin
+
+Place the **key** & **cert** files inside your Meteor private directory.
+
+In your server code, add the following lines:
+
+Import the plugin:
+
+```
+import { SSL } from 'meteor/uphilld:ssl';
+```
+
+Add the SSL function call **inside your `Meteor.startup()`** function:
+
+```sh
+SSL(
+  Assets.getText("<key file>"),
+  Assets.getText("<cert file>"),
+  <port>);
+```
+
+Replace *\<key file\>* and *\<cert file\>* with the full name of the key and certificate files inside your private directory (without their paths).
+Replace *\<port\>* with the port you wish to host the secure site on. Leave it empty for the default 443. Using the default ports requires launching meteor with sudo.
+
+### Step 3: Deploy your site
+
+This step depends on the way you deploy your meteor webpage. I deploy with `meteor run`, so I'll describe that process.
+
+If you are using the default ports (80 for http, 443 for https) you need sudo:
+
+```sudo meteor run```
+
+If you are using non-default ports (>1024), you need to clarify the non-secure one (the plugin takes care of the secure one you typed on the previous step):
+
+```meteor run -p 1000```
+
+# The information below comes from the original repo.
 
 ## API
 ### SSL(**key**, **cert**, [**port**])
@@ -82,7 +164,7 @@ You are not using HTTPS
 * If your SSL Certificate has a password, you will be prompted with "Enter PEM passphrase" everytime the server is started.
 * In order for Meteor to use port 443 for SSL (the default port), it must be started as root:
 ```sh
-sudo meteor 
+sudo meteor
 ```
 Failing to do this can cause error `Error: listen EACCES` being thrown by dependency node-http-proxy
 * In order for the *force-ssl* package to work with this package, please make sure the SSL port is 443 (default).
